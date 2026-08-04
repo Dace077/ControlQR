@@ -1,0 +1,51 @@
+name: Compilar y probar
+
+# Verifica cada cambio y deja un APK de pruebas descargable desde la pestaña Actions.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Pruebas unitarias
+        run: gradle --no-daemon testDebugUnitTest
+
+      - name: Compilar APK de pruebas
+        env:
+          UPDATE_REPO: ${{ github.repository }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: gradle --no-daemon assembleDebug
+
+      - name: Publicar resultados de las pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-pruebas
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+
+      - name: Publicar APK de pruebas
+        uses: actions/upload-artifact@v4
+        with:
+          name: ControlQR-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

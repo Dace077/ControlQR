@@ -1,0 +1,102 @@
+name: Publicar versión
+
+# Se dispara al crear una etiqueta como v1.0.0 y deja el APK publicado en Releases.
+# Ese Release es el link de descarga que se comparte y el que consulta la propia app
+# cuando busca actualizaciones.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a publicar, por ejemplo 1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Calcular la versión
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publicando versión $VERSION"
+
+      - name: Restaurar el almacén de llaves
+        # Sin secretos configurados el APK sale firmado en modo depuración:
+        # instalable para probar, pero no apto para distribuir a los vigilantes.
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No hay KEYSTORE_BASE64; el APK se firmará con la llave de depuración."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pruebas unitarias
+        run: gradle --no-daemon testReleaseUnitTest
+
+      - name: Compilar APK de release
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ github.run_number }}
+          UPDATE_REPO: ${{ github.repository }}
+          KEYSTORE_FILE: ${{ steps.keystore.outputs.present == 'true' && 'keystore.jks' || '' }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle --no-daemon assembleRelease
+
+      - name: Renombrar el APK
+        run: |
+          mkdir -p publicacion
+          cp app/build/outputs/apk/release/*.apk \
+             "publicacion/ControlQR-${{ steps.version.outputs.name }}.apk"
+
+      - name: Publicar el Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', steps.version.outputs.name) || github.ref_name }}
+          name: Control QR ${{ steps.version.outputs.name }}
+          files: publicacion/*.apk
+          generate_release_notes: true
+          body: |
+            ## Instalación
+
+            1. Descarga el archivo `.apk` de abajo desde el teléfono.
+            2. Android pedirá permiso para instalar desde esta fuente: acéptalo.
+            3. Si actualizas, instala encima: **los datos y la llave del sitio se conservan**.
+
+            > La app funciona sin internet. La conexión solo se usa para descargar esta actualización.
+
+      - name: Borrar el almacén de llaves
+        if: always()
+        run: rm -f keystore.jks

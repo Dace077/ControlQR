@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Módulos de un QR estilizado -->
+    <group android:translateX="27" android:translateY="27">
+        <path android:fillColor="#FFFFFF" android:pathData="M0,0h20v20h-20z" />
+        <path android:fillColor="#0F3D5C" android:pathData="M5,5h10v10h-10z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M34,0h20v20h-20z" />
+        <path android:fillColor="#0F3D5C" android:pathData="M39,5h10v10h-10z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M0,34h20v20h-20z" />
+        <path android:fillColor="#0F3D5C" android:pathData="M5,39h10v10h-10z" />
+        <path android:fillColor="#4FC3F7" android:pathData="M27,27h7v7h-7z" />
+        <path android:fillColor="#4FC3F7" android:pathData="M40,34h7v7h-7z" />
+        <path android:fillColor="#4FC3F7" android:pathData="M27,40h7v7h-7z" />
+        <path android:fillColor="#4FC3F7" android:pathData="M47,47h7v7h-7z" />
+    </group>
+</vector>

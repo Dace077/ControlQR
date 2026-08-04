@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="compartidos" path="compartidos/" />
+    <files-path name="respaldos" path="respaldos/" />
+    <external-files-path name="exportaciones" path="." />
+</paths>
