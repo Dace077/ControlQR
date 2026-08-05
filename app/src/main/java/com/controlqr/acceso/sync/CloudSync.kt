@@ -165,8 +165,9 @@ class CloudSync(
             }
             if (snapshot == null) return@addSnapshotListener
 
-            // hasPendingWrites indica cambios locales que aún no confirma el servidor.
-            val pending = snapshot.documents.count { it.metadata.hasPendingWrites }
+            // hasPendingWrites() indica cambios locales que aún no confirma el servidor.
+            // Es un método, no una propiedad: no sigue la convención get/is de Java.
+            val pending = snapshot.documents.count { it.metadata.hasPendingWrites() }
             val fromCache = snapshot.metadata.isFromCache
 
             val remotePasses = snapshot.documents.mapNotNull { it.toPassEntity() }

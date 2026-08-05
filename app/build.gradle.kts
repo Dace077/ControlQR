@@ -141,6 +141,12 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.zxing.core)
 
+    // CameraX expone ListenableFuture en su API. Firebase arrastra el artefacto
+    // "listenablefuture:9999.0-empty-to-avoid-conflict-with-guava", que está vacío a
+    // propósito y gana la resolución, dejando esa clase sin implementación. Declarar
+    // Guava explícitamente devuelve la clase real al classpath.
+    implementation(libs.guava)
+
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.datastore.preferences)
 
