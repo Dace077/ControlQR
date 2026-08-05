@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.controlqr.acceso.AppContainer
 import com.controlqr.acceso.data.ScanOutcome
 import com.controlqr.acceso.data.db.ScanType
+import com.controlqr.acceso.sync.SyncStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,9 @@ class ScanViewModel(
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
+
+    /** El vigilante debe poder ver si sus registros ya subieron o siguen en cola. */
+    val syncStatus: StateFlow<SyncStatus> = container.sync.status
 
     private var lastCode: String? = null
     private var lastCodeAt: Long = 0L

@@ -8,6 +8,7 @@ import com.controlqr.acceso.data.BackupManager
 import com.controlqr.acceso.data.UserRepository
 import com.controlqr.acceso.data.db.AppDatabase
 import com.controlqr.acceso.data.prefs.AppSettings
+import com.controlqr.acceso.sync.CloudSync
 import com.controlqr.acceso.update.UpdateChecker
 
 /**
@@ -23,6 +24,15 @@ class AppContainer(context: Context) {
     val users = UserRepository(database.userDao(), settings)
     val backup = BackupManager(context.applicationContext, access, settings)
     val updates = UpdateChecker()
+    val sync = CloudSync(context.applicationContext, access, settings)
+
+    init {
+        // Cada cambio local se replica; lo que baja de la nube entra por mergePasses
+        // y no vuelve a subir, así que no hay eco entre equipos.
+        access.onPassChanged = sync::push
+        access.onEventLogged = sync::push
+        sync.start()
+    }
 }
 
 class ControlQrApp : Application() {

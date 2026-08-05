@@ -50,6 +50,7 @@ import com.controlqr.acceso.data.db.ScanType
 import com.controlqr.acceso.ui.components.CameraPermissionGate
 import com.controlqr.acceso.ui.components.QrScannerView
 import com.controlqr.acceso.ui.components.ScanFeedback
+import com.controlqr.acceso.ui.components.SyncBadge
 import com.controlqr.acceso.ui.theme.RojoRechazo
 import com.controlqr.acceso.ui.theme.VerdeAcceso
 import com.controlqr.acceso.ui.vm.ScanViewModel
@@ -69,6 +70,7 @@ fun ScanScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val isEntry = type == ScanType.ENTRADA
@@ -102,6 +104,7 @@ fun ScanScreen(
                     }
                 },
                 actions = {
+                    SyncBadge(syncStatus, compact = true)
                     IconButton(onClick = { viewModel.toggleTorch() }) {
                         Icon(
                             if (state.torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,

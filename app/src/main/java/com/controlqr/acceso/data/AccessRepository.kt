@@ -57,6 +57,17 @@ class AccessRepository(
     private val settings: AppSettings
 ) {
 
+    /**
+     * Ganchos para replicar cambios hacia otros equipos. Se dejan como callbacks para
+     * que esta clase no dependa de Firebase: las reglas de acceso deben poder probarse
+     * y funcionar aunque no exista capa de red.
+     *
+     * Solo se disparan con cambios originados aquí; lo que llega de la nube entra por
+     * mergePasses y no rebota.
+     */
+    var onPassChanged: ((PassEntity) -> Unit)? = null
+    var onEventLogged: ((ScanEventEntity) -> Unit)? = null
+
     // ------------------------------------------------------------- consultas
 
     fun observeRecent(limit: Int = 300): Flow<List<PassEntity>> = passDao.observeRecent(limit)
@@ -129,6 +140,7 @@ class AccessRepository(
                 payload = encoded
             )
             passDao.upsert(entity)
+            onPassChanged?.invoke(entity)
             IssueResult.Ok(entity, payload)
         }.getOrElse { error ->
             // No cobramos el token si la emisión no llegó a guardarse.
@@ -139,6 +151,7 @@ class AccessRepository(
 
     suspend fun revoke(tokenId: Int, reason: String) {
         passDao.revoke(tokenId, System.currentTimeMillis(), reason)
+        passDao.byToken(tokenId)?.let { onPassChanged?.invoke(it) }
     }
 
     // -------------------------------------------------------------- escaneo
@@ -237,20 +250,21 @@ class AccessRepository(
             updatedAt = now
         )
         passDao.upsert(entity)
+        onPassChanged?.invoke(entity)
 
-        eventDao.insert(
-            ScanEventEntity(
-                tokenId = entity.tokenId,
-                folio = entity.folio,
-                fullName = entity.fullName,
-                type = ScanType.ENTRADA,
-                at = now,
-                byUser = byUser,
-                deviceCode = settings.deviceCode,
-                accepted = true,
-                message = "Entrada registrada"
-            )
+        val event = ScanEventEntity(
+            tokenId = entity.tokenId,
+            folio = entity.folio,
+            fullName = entity.fullName,
+            type = ScanType.ENTRADA,
+            at = now,
+            byUser = byUser,
+            deviceCode = settings.deviceCode,
+            accepted = true,
+            message = "Entrada registrada"
         )
+        eventDao.insert(event)
+        onEventLogged?.invoke(event)
 
         val warning = if (now > payload.validFromMillis + 24 * 60 * 60_000L) {
             "Ingreso muy posterior a la hora programada."
@@ -294,6 +308,7 @@ class AccessRepository(
             updatedAt = now
         )
         passDao.upsert(entity)
+        onPassChanged?.invoke(entity)
 
         val warning = when {
             existing?.status == PassStatus.REVOCADO ->
@@ -303,19 +318,19 @@ class AccessRepository(
             else -> null
         }
 
-        eventDao.insert(
-            ScanEventEntity(
-                tokenId = entity.tokenId,
-                folio = entity.folio,
-                fullName = entity.fullName,
-                type = ScanType.SALIDA,
-                at = now,
-                byUser = byUser,
-                deviceCode = settings.deviceCode,
-                accepted = true,
-                message = warning ?: "Salida registrada"
-            )
+        val event = ScanEventEntity(
+            tokenId = entity.tokenId,
+            folio = entity.folio,
+            fullName = entity.fullName,
+            type = ScanType.SALIDA,
+            at = now,
+            byUser = byUser,
+            deviceCode = settings.deviceCode,
+            accepted = true,
+            message = warning ?: "Salida registrada"
         )
+        eventDao.insert(event)
+        onEventLogged?.invoke(event)
 
         return ScanOutcome.Granted(entity, ScanType.SALIDA, entity.dwellMinutes, warning)
     }
@@ -330,19 +345,19 @@ class AccessRepository(
         pass: PassEntity? = null,
         fullName: String? = null
     ): ScanOutcome.Denied {
-        eventDao.insert(
-            ScanEventEntity(
-                tokenId = tokenId,
-                folio = folio,
-                fullName = fullName ?: pass?.fullName,
-                type = ScanType.DENEGADO,
-                at = System.currentTimeMillis(),
-                byUser = byUser,
-                deviceCode = settings.deviceCode,
-                accepted = false,
-                message = "$title · $detail (intento de ${type.name.lowercase()})"
-            )
+        val event = ScanEventEntity(
+            tokenId = tokenId,
+            folio = folio,
+            fullName = fullName ?: pass?.fullName,
+            type = ScanType.DENEGADO,
+            at = System.currentTimeMillis(),
+            byUser = byUser,
+            deviceCode = settings.deviceCode,
+            accepted = false,
+            message = "$title · $detail (intento de ${type.name.lowercase()})"
         )
+        eventDao.insert(event)
+        onEventLogged?.invoke(event)
         return ScanOutcome.Denied(title, detail, pass)
     }
 

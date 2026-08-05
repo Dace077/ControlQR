@@ -51,6 +51,7 @@ class UserRepository(
         settings.poolSize = poolSize
         settings.keyId = 1
         if (settings.siteSecret == null) settings.siteSecret = Crypto.newSiteSecret()
+        settings.ensureSiteId()
 
         val entity = UserEntity(
             username = user,
@@ -156,6 +157,7 @@ class UserRepository(
         return ProvisioningCodec.encode(
             ProvisioningPayload(
                 siteName = settings.siteName,
+                siteId = settings.ensureSiteId(),
                 keyId = settings.keyId,
                 siteSecret = secret,
                 username = username.trim().lowercase(),
@@ -172,6 +174,7 @@ class UserRepository(
             ?: return AuthResult.Error("Ese QR no es de vinculación de equipo.")
 
         settings.siteName = payload.siteName
+        if (payload.siteId.isNotBlank()) settings.siteId = payload.siteId
         settings.keyId = payload.keyId
         settings.siteSecret = payload.siteSecret
         settings.deviceCode = payload.deviceCode

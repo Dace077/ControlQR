@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.controlqr.acceso.sync.SyncStatus
+import com.controlqr.acceso.ui.components.SyncBadge
 import com.controlqr.acceso.ui.theme.VerdeAcceso
 
 /**
@@ -41,6 +43,7 @@ import com.controlqr.acceso.ui.theme.VerdeAcceso
 fun GuardHomeScreen(
     displayName: String,
     siteName: String,
+    syncStatus: SyncStatus,
     onEntry: () -> Unit,
     onExit: () -> Unit,
     onSignOut: () -> Unit
@@ -55,6 +58,7 @@ fun GuardHomeScreen(
                     }
                 },
                 actions = {
+                    SyncBadge(syncStatus, compact = true)
                     IconButton(onClick = onSignOut) {
                         Icon(Icons.Default.PowerSettingsNew, contentDescription = "Cerrar sesión")
                     }

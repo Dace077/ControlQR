@@ -190,9 +190,11 @@ private fun MainGraph(session: SessionViewModel, state: SessionViewModel.State) 
             }
         } else {
             composable(Routes.GUARD_HOME) {
+                val syncStatus by container.sync.status.collectAsStateWithLifecycle()
                 GuardHomeScreen(
                     displayName = user.displayName,
                     siteName = state.siteName,
+                    syncStatus = syncStatus,
                     onEntry = { navController.navigate(Routes.SCAN_ENTRY) },
                     onExit = { navController.navigate(Routes.SCAN_EXIT) },
                     onSignOut = session::signOut

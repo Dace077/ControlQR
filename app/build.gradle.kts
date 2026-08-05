@@ -7,6 +7,17 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// La sincronización en la nube es opcional. Sin google-services.json el plugin no se
+// aplica, no se genera la configuración de Firebase y la app arranca en modo solo local:
+// así el repositorio compila para cualquiera que lo clone sin tener el proyecto de Firebase.
+val firebaseConfig = file("google-services.json")
+val cloudSyncAvailable = firebaseConfig.exists()
+if (cloudSyncAvailable) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.lifecycle("google-services.json no encontrado: se compila sin sincronización en la nube.")
+}
+
 // Firma de release: si existe keystore.properties (local) o las variables de entorno
 // que inyecta GitHub Actions, se firma con la llave real. Si no, se usa la de debug
 // para que el proyecto siempre compile.
@@ -38,6 +49,10 @@ android {
             "UPDATE_REPO",
             "\"${System.getenv("UPDATE_REPO") ?: "Dace077/ControlQR"}\""
         )
+
+        // Permite que la interfaz explique por qué la sincronización no está disponible
+        // en lugar de mostrar un interruptor que no hace nada.
+        buildConfigField("boolean", "CLOUD_SYNC_AVAILABLE", cloudSyncAvailable.toString())
     }
 
     signingConfigs {
@@ -128,6 +143,13 @@ dependencies {
 
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.datastore.preferences)
+
+    // Sincronización en tiempo real. Firestore trae cola offline propia: las escrituras
+    // hechas sin señal se guardan en el teléfono y suben solas al recuperar la conexión.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     testImplementation(libs.junit)
 }

@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para Control QR.
+// Cópialas en la consola de Firebase: Firestore Database > Reglas > Publicar.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cada sitio vive bajo un identificador aleatorio de 128 bits que solo conocen
+    // los equipos vinculados por el QR de aprovisionamiento.
+    match /sitios/{siteId}/{document=**} {
+
+      // Exige sesión iniciada (la app usa autenticación anónima) y limita el tamaño
+      // de los documentos para que nadie use el proyecto como almacenamiento gratuito.
+      allow read: if request.auth != null;
+
+      allow write: if request.auth != null
+                   && request.resource.size() < 40
+                   && request.resource.data.keys().hasOnly([
+                        'tokenId', 'folio', 'keyId', 'nonce',
+                        'fullName', 'carrier', 'plate', 'company', 'notes',
+                        'issuedBy', 'issuedAt', 'validFrom', 'validUntil',
+                        'status', 'entryAt', 'entryBy', 'entryDevice',
+                        'exitAt', 'exitBy', 'exitDevice',
+                        'revokedAt', 'revokedReason', 'payload', 'updatedAt',
+                        'type', 'at', 'byUser', 'deviceCode', 'accepted', 'message'
+                      ]);
+    }
+
+    // Todo lo demás queda cerrado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ALCANCE REAL DE ESTAS REGLAS — léelo antes de confiar en ellas
+//
+// Protegen contra: acceso sin sesión, escritura de campos arbitrarios y uso del
+// proyecto como almacén ajeno.
+//
+// NO protegen contra: alguien que obtenga el identificador de un sitio (por ejemplo
+// extrayéndolo de un teléfono perdido o del QR de vinculación). Con ese identificador
+// y una sesión anónima podría leer los nombres y placas de ese sitio.
+//
+// Lo que sigue estando cubierto aunque eso ocurra: no podría fabricar pases válidos,
+// porque la firma HMAC depende de la llave del sitio, que nunca viaja a Firestore.
+//
+// Si necesitas cerrar esa brecha, el camino es sustituir la autenticación anónima por
+// cuentas reales de Firebase Auth y una colección de miembros por sitio:
+//
+//   match /sitios/{siteId}/{document=**} {
+//     allow read, write: if request.auth != null
+//                        && exists(/databases/$(database)/documents/sitios/$(siteId)/miembros/$(request.auth.uid));
+//   }
+//
+// Eso obliga a dar de alta cada dispositivo explícitamente y es la opción correcta si
+// manejas datos personales sujetos a normativa.

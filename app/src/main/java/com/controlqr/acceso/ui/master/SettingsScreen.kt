@@ -44,6 +44,7 @@ import com.controlqr.acceso.core.Formats
 import com.controlqr.acceso.ui.components.BannerTone
 import com.controlqr.acceso.ui.components.InfoBanner
 import com.controlqr.acceso.ui.components.SectionTitle
+import com.controlqr.acceso.ui.components.SyncBadge
 import com.controlqr.acceso.ui.util.Sharing
 import com.controlqr.acceso.ui.vm.AdminViewModel
 
@@ -66,6 +67,8 @@ fun SettingsScreen(
     var validityHours by remember { mutableStateOf(settings.defaultValidityHours.toString()) }
     var grace by remember { mutableStateOf(settings.earlyEntryGraceMinutes.toString()) }
     var allowExit by remember { mutableStateOf(settings.allowExitWithoutEntry) }
+    var syncEnabled by remember { mutableStateOf(settings.syncEnabled) }
+    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -192,6 +195,72 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            SectionTitle("Sincronización entre equipos") {
+                SyncBadge(syncStatus)
+            }
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    if (!BuildConfig.CLOUD_SYNC_AVAILABLE) {
+                        InfoBanner(
+                            "Esta versión se compiló sin credenciales de Firebase, así que opera solo en local. " +
+                                "Agrega google-services.json al proyecto y publica una versión nueva para activarla.",
+                            tone = BannerTone.WARNING
+                        )
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Switch(
+                                checked = syncEnabled,
+                                onCheckedChange = {
+                                    syncEnabled = it
+                                    viewModel.updateSyncEnabled(it)
+                                }
+                            )
+                            Column(Modifier.padding(start = 12.dp)) {
+                                Text("Sincronizar en tiempo real", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "El master ve los escaneos de las casetas conforme ocurren.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "Sitio: ${settings.siteId.take(12)}…",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (settings.lastSyncAt > 0) {
+                            Text(
+                                "Última sincronización: ${Formats.dateTime(settings.lastSyncAt)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (syncStatus.detail.isNotBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                syncStatus.detail,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedButton(
+                            onClick = viewModel::retrySync,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Reintentar conexión") }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Sin señal la caseta sigue operando normalmente: los movimientos se guardan en el " +
+                    "teléfono y suben solos al recuperar datos o wifi.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             SectionTitle("Respaldo y conciliación")
             Button(

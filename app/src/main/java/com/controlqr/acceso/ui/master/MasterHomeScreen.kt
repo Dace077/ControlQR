@@ -46,6 +46,7 @@ import com.controlqr.acceso.ui.components.BannerTone
 import com.controlqr.acceso.ui.components.InfoBanner
 import com.controlqr.acceso.ui.components.SectionTitle
 import com.controlqr.acceso.ui.components.StatTile
+import com.controlqr.acceso.ui.components.SyncBadge
 import com.controlqr.acceso.ui.theme.VerdeAcceso
 import com.controlqr.acceso.ui.vm.AdminViewModel
 
@@ -68,7 +69,10 @@ fun MasterHomeScreen(
 ) {
     val dashboard by viewModel.dashboard.collectAsStateWithLifecycle()
     val insideNow by viewModel.insideCount.collectAsStateWithLifecycle()
+    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
 
+    // Cada escaneo de un vasallo baja por la sincronización y modifica la base local,
+    // lo que mueve este contador: de ahí se recalcula el tablero en tiempo real.
     LaunchedEffect(insideNow) { viewModel.refreshDashboard() }
 
     Scaffold(
@@ -98,7 +102,9 @@ fun MasterHomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-            SectionTitle("Ocupación en este momento")
+            SectionTitle("Ocupación en este momento") {
+                SyncBadge(syncStatus)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 StatTile(
                     value = insideNow.toString(),

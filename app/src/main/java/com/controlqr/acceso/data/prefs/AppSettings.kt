@@ -32,6 +32,32 @@ class AppSettings(context: Context) {
         get() = prefs.getString(KEY_SITE_NAME, "") ?: ""
         set(value) = prefs.edit().putString(KEY_SITE_NAME, value).apply()
 
+    /**
+     * Identificador del sitio en la nube. Es aleatorio de 128 bits y lo comparten todos
+     * los equipos vinculados: define contra qué espacio de Firestore sincronizan.
+     * Se crea en el master y viaja dentro del QR de aprovisionamiento.
+     */
+    var siteId: String
+        get() = prefs.getString(KEY_SITE_ID, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_SITE_ID, value).apply()
+
+    fun ensureSiteId(): String {
+        val current = siteId
+        if (current.isNotBlank()) return current
+        val generated = Crypto.b64(Crypto.randomBytes(16))
+        siteId = generated
+        return generated
+    }
+
+    /** Sincronizar es opcional: en sitios sin cobertura conviene dejarlo apagado. */
+    var syncEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SYNC_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_SYNC_ENABLED, value).apply()
+
+    var lastSyncAt: Long
+        get() = prefs.getLong(KEY_LAST_SYNC, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_SYNC, value).apply()
+
     var keyId: Int
         get() = prefs.getInt(KEY_KEY_ID, 1)
         set(value) = prefs.edit().putInt(KEY_KEY_ID, value).apply()
@@ -138,6 +164,9 @@ class AppSettings(context: Context) {
 
         private const val FILE_NAME = "controlqr_secure"
         private const val KEY_SITE_NAME = "site_name"
+        private const val KEY_SITE_ID = "site_id"
+        private const val KEY_SYNC_ENABLED = "sync_enabled"
+        private const val KEY_LAST_SYNC = "last_sync"
         private const val KEY_SITE_SECRET = "site_secret"
         private const val KEY_KEY_ID = "key_id"
         private const val KEY_DEVICE_CODE = "device_code"

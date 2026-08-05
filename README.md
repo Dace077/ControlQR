@@ -97,6 +97,57 @@ master ni siquiera existen en su grafo de navegación.
 
 ---
 
+## Sincronización en tiempo real (opcional)
+
+El master puede ver los escaneos de las casetas conforme ocurren, sobre datos móviles o wifi.
+
+**La validación del QR nunca depende de la red.** Cuando el vigilante escanea, la respuesta
+sale de la base local en milisegundos. La sincronización solo replica el resultado hacia los
+demás equipos.
+
+```
+Vasallo escanea → base local (decide entrada/salida al instante)
+                       ↓
+                  Firestore (encola si no hay señal)
+                       ↓
+Master: Firestore → base local → el tablero se actualiza solo
+```
+
+Sin señal la caseta opera igual y los movimientos suben solos al recuperar conexión. El
+indicador de estado (**En línea / Sin señal / N pendientes**) está siempre visible en el
+tablero y en las pantallas de caseta.
+
+### Configurarla
+
+1. Crea un proyecto en **https://console.firebase.google.com**
+2. Agrega una app Android con el paquete **`com.controlqr.acceso`**
+3. Descarga **`google-services.json`** y colócalo en la carpeta **`app/`**
+4. **Firestore Database → Crear base de datos** (modo producción)
+5. **Firestore Database → Reglas**: pega el contenido de [`firestore.rules`](firestore.rules) y publica
+6. **Authentication → Sign-in method**: activa **Anónimo**
+7. Sube el cambio y publica una versión nueva
+
+Sin `google-services.json` el proyecto **compila igual** y la app funciona 100 % offline; en
+Ajustes aparece el aviso de que esa versión se compiló sin credenciales.
+
+> `google-services.json` no es un secreto: va dentro del APK y cualquiera puede extraerlo.
+> La seguridad la dan las reglas de Firestore, no ocultar ese archivo. Por eso se versiona.
+
+### Lo que la sincronización no resuelve
+
+Si el equipo de entrada y el de salida están **ambos sin señal al mismo tiempo**, no pueden
+consultarse entre sí: el uso único sigue siendo local y de consistencia eventual. La
+sincronización reduce mucho esa ventana, no la elimina. Para cerrarla del todo habría que
+exigir conexión en el momento del escaneo, lo que rompería la operación offline.
+
+### Privacidad
+
+Al activarla, los nombres, líneas transportistas y placas salen del teléfono hacia servidores
+de Google. Lee el alcance de las reglas al final de [`firestore.rules`](firestore.rules) antes
+de encenderla si manejas datos sujetos a normativa.
+
+---
+
 ## Reportes
 
 - **Ocupación en tiempo real:** cuántas personas están adentro en este momento.
@@ -213,6 +264,7 @@ app/src/main/java/com/controlqr/acceso/
 │   ├── UserRepository.kt         cuentas, sesión y aprovisionamiento
 │   ├── Reports.kt                agregación por día, semana y mes
 │   └── BackupManager.kt          exportar/importar JSON y CSV
+├── sync/CloudSync.kt             réplica en tiempo real entre equipos (opcional)
 ├── ui/
 │   ├── auth/                     alta inicial, login, vinculación
 │   ├── guard/                    pantallas de caseta (entrada y salida)

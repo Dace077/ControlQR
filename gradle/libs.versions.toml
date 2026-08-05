@@ -13,6 +13,8 @@ mlkitBarcode = "17.3.0"
 zxing = "3.5.3"
 securityCrypto = "1.1.0-alpha06"
 datastore = "1.1.1"
+firebaseBom = "33.7.0"
+googleServices = "4.4.2"
 coroutines = "1.9.0"
 junit = "4.13.2"
 
@@ -49,6 +51,11 @@ androidx-security-crypto = { group = "androidx.security", name = "security-crypt
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
+
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
@@ -57,3 +64,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

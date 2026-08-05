@@ -13,6 +13,8 @@ import org.json.JSONObject
  */
 data class ProvisioningPayload(
     val siteName: String,
+    /** Espacio de sincronización compartido; vacío si el sitio opera solo local. */
+    val siteId: String,
     val keyId: Int,
     val siteSecret: ByteArray,
     val username: String,
@@ -23,6 +25,7 @@ data class ProvisioningPayload(
     override fun equals(other: Any?): Boolean =
         other is ProvisioningPayload &&
             siteName == other.siteName &&
+            siteId == other.siteId &&
             keyId == other.keyId &&
             siteSecret.contentEquals(other.siteSecret) &&
             username == other.username &&
@@ -32,6 +35,7 @@ data class ProvisioningPayload(
 
     override fun hashCode(): Int {
         var result = siteName.hashCode()
+        result = 31 * result + siteId.hashCode()
         result = 31 * result + keyId
         result = 31 * result + siteSecret.contentHashCode()
         result = 31 * result + username.hashCode()
@@ -49,6 +53,7 @@ object ProvisioningCodec {
     fun encode(payload: ProvisioningPayload): String {
         val json = JSONObject().apply {
             put("s", payload.siteName)
+            put("i", payload.siteId)
             put("k", payload.keyId)
             put("q", Crypto.b64(payload.siteSecret))
             put("u", payload.username)
@@ -66,6 +71,7 @@ object ProvisioningCodec {
             val json = JSONObject(String(Crypto.unb64(text.substring(PREFIX.length + 1)), Charsets.UTF_8))
             ProvisioningPayload(
                 siteName = json.getString("s"),
+                siteId = json.optString("i"),
                 keyId = json.getInt("k"),
                 siteSecret = Crypto.unb64(json.getString("q")),
                 username = json.getString("u"),

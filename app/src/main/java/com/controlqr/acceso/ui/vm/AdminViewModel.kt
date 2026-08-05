@@ -16,6 +16,7 @@ import com.controlqr.acceso.data.db.PassStatus
 import com.controlqr.acceso.data.db.ScanEventEntity
 import com.controlqr.acceso.data.db.UserEntity
 import com.controlqr.acceso.data.db.UserRole
+import com.controlqr.acceso.sync.SyncStatus
 import com.controlqr.acceso.update.ReleaseInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -63,6 +64,9 @@ class AdminViewModel(private val container: AppContainer) : ViewModel() {
 
     val users: StateFlow<List<UserEntity>> = container.users.observeUsers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Estado de la réplica entre equipos; alimenta el indicador del tablero. */
+    val syncStatus: StateFlow<SyncStatus> = container.sync.status
 
     private val _dashboard = MutableStateFlow(Dashboard())
     val dashboard: StateFlow<Dashboard> = _dashboard.asStateFlow()
@@ -214,6 +218,19 @@ class AdminViewModel(private val container: AppContainer) : ViewModel() {
 
     fun updateAllowExitWithoutEntry(value: Boolean) {
         container.settings.allowExitWithoutEntry = value
+    }
+
+    fun updateSyncEnabled(value: Boolean) {
+        container.settings.syncEnabled = value
+        if (value) container.sync.restart() else container.sync.stop()
+        _feedback.value = Feedback(
+            if (value) "Sincronización activada." else "Sincronización apagada; el equipo opera solo local."
+        )
+    }
+
+    fun retrySync() {
+        container.sync.restart()
+        _feedback.value = Feedback("Reintentando conexión…")
     }
 
     fun updateEarlyGrace(value: Int) {
