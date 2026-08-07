@@ -64,7 +64,7 @@ jobs:
       - name: Pruebas unitarias
         run: gradle --no-daemon testReleaseUnitTest
 
-      - name: Compilar APK de release
+      - name: Compilar APK y AAB de release
         env:
           VERSION_NAME: ${{ steps.version.outputs.name }}
           VERSION_CODE: ${{ github.run_number }}
@@ -73,7 +73,19 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle --no-daemon assembleRelease
+        # El APK sirve para instalar directo; el AAB es el formato que exige Play
+        # Console para aplicaciones nuevas.
+        run: gradle --no-daemon assembleRelease bundleRelease
+
+      - name: Publicar el AAB para Play Console
+        # No se adjunta al Release público: un AAB no se puede instalar en un teléfono,
+        # solo se sube a Play. Queda como artefacto de la ejecución.
+        uses: actions/upload-artifact@v4
+        with:
+          name: ControlQR-${{ steps.version.outputs.name }}-playstore
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Renombrar el APK
         run: |
