@@ -171,60 +171,43 @@ de la historia. Dos mecanismos lo resuelven:
 
 ---
 
-## Publicar en GitHub y generar el link de descarga
+## Distribución
 
-### Primera vez
+La aplicación se distribuye por **Google Play**. Este repositorio contiene el código fuente y
+compila los archivos que se suben a Play Console; **no publica APK descargables**.
 
-```bash
-git init && git add . && git commit -m "Control QR: versión inicial"
-```
+La guía completa del proceso de alta está en [`docs/PLAY-STORE.md`](docs/PLAY-STORE.md).
 
-Crea el repositorio y súbelo:
-
-```bash
-gh repo create Dace077/ControlQR --public --source=. --push
-```
-
-### Publicar una versión
+### Compilar una versión para subir a Play
 
 ```bash
-git tag v1.0.0 && git push origin v1.0.0
+git tag v1.1.0 && git push origin v1.1.0
 ```
 
-GitHub Actions compila el APK y crea un **Release** con el archivo adjunto. Ese es el link de
-descarga que compartes. Para la siguiente versión, `v1.0.1`, y así.
+Al terminar el workflow, en la pestaña *Actions* de la ejecución aparecen dos artefactos:
 
-### Firma del APK (recomendado)
-
-Sin esto el APK se firma con la llave de depuración: sirve para probar, pero **las
-actualizaciones futuras no se podrán instalar encima**. Genera tu llave una sola vez:
-
-```bash
-keytool -genkeypair -v -keystore controlqr.jks -keyalg RSA -keysize 2048 -validity 10000 -alias controlqr
-```
-
-Conviértela a texto:
-
-```bash
-base64 -w0 controlqr.jks > controlqr.b64
-```
-
-En GitHub → *Settings → Secrets and variables → Actions*, crea:
-
-| Secreto | Contenido |
+| Artefacto | Para qué |
 |---|---|
-| `KEYSTORE_BASE64` | el contenido de `controlqr.b64` |
-| `KEYSTORE_PASSWORD` | la contraseña del almacén |
-| `KEY_ALIAS` | `controlqr` |
-| `KEY_PASSWORD` | la contraseña de la llave |
+| `ControlQR-<versión>-playstore` | El `.aab` que se sube a Play Console |
+| `ControlQR-<versión>-apk-pruebas` | APK firmado, para instalar a mano en pruebas internas |
 
-> Guarda `controlqr.jks` fuera del repositorio y respáldalo. Si lo pierdes, no podrás publicar
-> actualizaciones que se instalen sobre la versión ya distribuida.
+El `versionCode` sale del número de ejecución del workflow, así que sube solo en cada
+publicación — Play exige que nunca se repita.
 
-### Actualizaciones desde la app
+### Firma
 
-**Ajustes → Buscar actualización** consulta el último Release del repositorio y ofrece
-descargar el APK. Es lo único que usa internet.
+Los cuatro secretos del repositorio (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
+`KEY_PASSWORD`) ya están configurados. El almacén de claves vive fuera del repositorio.
+
+> ⚠️ Al dar de alta la app en Play Console hay que **subir ese mismo almacén como llave de
+> firma existente**. Si Google genera una llave nueva, la versión de Play no se instalará
+> sobre las instalaciones previas y cada dispositivo perdería sus registros locales. La
+> elección se hace una sola vez y no se puede revertir.
+
+### Actualizaciones
+
+Play instala las versiones nuevas automáticamente. En **Ajustes → Ver en Google Play** hay un
+acceso directo a la ficha, pero no hace falta revisar nada a mano.
 
 ---
 
@@ -265,13 +248,14 @@ app/src/main/java/com/controlqr/acceso/
 │   ├── Reports.kt                agregación por día, semana y mes
 │   └── BackupManager.kt          exportar/importar JSON y CSV
 ├── sync/CloudSync.kt             réplica en tiempo real entre equipos (opcional)
+│
 ├── ui/
 │   ├── auth/                     alta inicial, login, vinculación
 │   ├── guard/                    pantallas de caseta (entrada y salida)
 │   ├── master/                   tablero, emisión, historial, reportes, usuarios, ajustes
 │   ├── components/               cámara, QR, tarjetas, avisos
 │   └── vm/                       ViewModels
-└── update/UpdateChecker.kt       consulta de Releases de GitHub
+└── ui/util/Sharing.kt            compartir credenciales, respaldos y ficha de Play
 ```
 
 ---

@@ -31,7 +31,6 @@ jobs:
 
       - name: Compilar APK de pruebas
         env:
-          UPDATE_REPO: ${{ github.repository }}
           VERSION_CODE: ${{ github.run_number }}
         run: gradle --no-daemon assembleDebug
 

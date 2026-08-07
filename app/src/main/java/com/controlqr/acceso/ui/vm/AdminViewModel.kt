@@ -17,7 +17,6 @@ import com.controlqr.acceso.data.db.ScanEventEntity
 import com.controlqr.acceso.data.db.UserEntity
 import com.controlqr.acceso.data.db.UserRole
 import com.controlqr.acceso.sync.SyncStatus
-import com.controlqr.acceso.update.ReleaseInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,9 +89,6 @@ class AdminViewModel(private val container: AppContainer) : ViewModel() {
             if (text.isBlank()) flowOf(emptyList()) else container.access.search(text)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    private val _release = MutableStateFlow<ReleaseInfo?>(null)
-    val release: StateFlow<ReleaseInfo?> = _release.asStateFlow()
 
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
@@ -264,29 +260,6 @@ class AdminViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 .onFailure {
                     _feedback.value = Feedback("No se pudo importar: ${it.message}", isError = true)
-                }
-            _busy.value = false
-        }
-    }
-
-    // ---------------------------------------------------------- actualización
-
-    fun checkForUpdate(repo: String, currentVersion: String) {
-        viewModelScope.launch {
-            _busy.value = true
-            container.updates.latestRelease(repo)
-                .onSuccess { info ->
-                    container.settings.lastUpdateCheck = System.currentTimeMillis()
-                    if (container.updates.isNewer(info.versionName, currentVersion)) {
-                        _release.value = info
-                        _feedback.value = Feedback("Hay una versión nueva: ${info.versionName}")
-                    } else {
-                        _release.value = null
-                        _feedback.value = Feedback("Ya tienes la última versión.")
-                    }
-                }
-                .onFailure {
-                    _feedback.value = Feedback("No se pudo consultar GitHub. Revisa tu conexión.", isError = true)
                 }
             _busy.value = false
         }

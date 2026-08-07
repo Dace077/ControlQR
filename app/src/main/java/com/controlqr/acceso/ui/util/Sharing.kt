@@ -45,4 +45,23 @@ object Sharing {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         }
     }
+
+    /**
+     * Abre la ficha de la app en Google Play. Se intenta primero el esquema `market://`,
+     * que salta directo a la aplicación de Play; si el equipo no la tiene instalada
+     * (algunos dispositivos industriales no la traen), se recurre al navegador.
+     */
+    fun openPlayStore(context: Context) {
+        val packageName = context.packageName.removeSuffix(".debug")
+        val opened = runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+            )
+            true
+        }.getOrDefault(false)
+
+        if (!opened) {
+            openUrl(context, "https://play.google.com/store/apps/details?id=$packageName")
+        }
+    }
 }

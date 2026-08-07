@@ -9,7 +9,6 @@ import com.controlqr.acceso.data.UserRepository
 import com.controlqr.acceso.data.db.AppDatabase
 import com.controlqr.acceso.data.prefs.AppSettings
 import com.controlqr.acceso.sync.CloudSync
-import com.controlqr.acceso.update.UpdateChecker
 
 /**
  * Contenedor de dependencias. La app es lo bastante pequeña para no necesitar un
@@ -23,7 +22,6 @@ class AppContainer(context: Context) {
     val access = AccessRepository(database.passDao(), database.scanEventDao(), settings)
     val users = UserRepository(database.userDao(), settings)
     val backup = BackupManager(context.applicationContext, access, settings)
-    val updates = UpdateChecker()
     val sync = CloudSync(context.applicationContext, access, settings)
 
     init {

@@ -59,7 +59,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val feedback by viewModel.feedback.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
-    val release by viewModel.release.collectAsStateWithLifecycle()
     val settings = viewModel.settings
 
     var poolSize by remember { mutableStateOf(settings.poolSize.toString()) }
@@ -302,35 +301,18 @@ fun SettingsScreen(
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Versión instalada: ${BuildConfig.VERSION_NAME}")
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        "Repositorio: ${BuildConfig.UPDATE_REPO}",
+                        "La app se distribuye por Google Play, que instala las versiones nuevas " +
+                            "automáticamente. No hace falta revisar nada a mano.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (settings.lastUpdateCheck > 0) {
-                        Text(
-                            "Última consulta: ${Formats.dateTime(settings.lastUpdateCheck)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            viewModel.checkForUpdate(BuildConfig.UPDATE_REPO, BuildConfig.VERSION_NAME)
-                        },
+                    OutlinedButton(
+                        onClick = { Sharing.openPlayStore(context) },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Buscar actualización") }
-
-                    release?.let { info ->
-                        Spacer(Modifier.height(12.dp))
-                        InfoBanner("Versión ${info.versionName} disponible.\n${info.notes}", tone = BannerTone.INFO)
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = { Sharing.openUrl(context, info.apkUrl ?: info.pageUrl) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Descargar APK") }
-                    }
+                    ) { Text("Ver en Google Play") }
                 }
             }
 

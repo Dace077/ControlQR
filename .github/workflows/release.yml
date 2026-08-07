@@ -1,8 +1,8 @@
-name: Publicar versión
+name: Compilar version para Play
 
-# Se dispara al crear una etiqueta como v1.0.0 y deja el APK publicado en Releases.
-# Ese Release es el link de descarga que se comparte y el que consulta la propia app
-# cuando busca actualizaciones.
+# Genera el AAB firmado que se sube a Google Play Console, y un APK firmado para
+# pruebas internas. Ninguno se publica en un Release de GitHub: la distribucion a
+# los usuarios finales se hace exclusivamente por Google Play.
 on:
   push:
     tags:
@@ -10,11 +10,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Versión a publicar, por ejemplo 1.0.0'
+        description: 'Versión a compilar, por ejemplo 1.1.0'
         required: true
-
-permissions:
-  contents: write
 
 jobs:
   release:
@@ -44,11 +41,9 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
           fi
           echo "name=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Publicando versión $VERSION"
+          echo "Compilando versión $VERSION"
 
       - name: Restaurar el almacén de llaves
-        # Sin secretos configurados el APK sale firmado en modo depuración:
-        # instalable para probar, pero no apto para distribuir a los vigilantes.
         id: keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -57,29 +52,25 @@ jobs:
             echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::No hay KEYSTORE_BASE64; el APK se firmará con la llave de depuración."
-            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Falta KEYSTORE_BASE64. Play rechaza compilaciones sin la llave real."
+            exit 1
           fi
 
       - name: Pruebas unitarias
         run: gradle --no-daemon testReleaseUnitTest
 
-      - name: Compilar APK y AAB de release
+      - name: Compilar AAB y APK firmados
         env:
           VERSION_NAME: ${{ steps.version.outputs.name }}
+          # Play exige que este número suba en cada envío y nunca se repita.
           VERSION_CODE: ${{ github.run_number }}
-          UPDATE_REPO: ${{ github.repository }}
-          KEYSTORE_FILE: ${{ steps.keystore.outputs.present == 'true' && 'keystore.jks' || '' }}
+          KEYSTORE_FILE: keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        # El APK sirve para instalar directo; el AAB es el formato que exige Play
-        # Console para aplicaciones nuevas.
-        run: gradle --no-daemon assembleRelease bundleRelease
+        run: gradle --no-daemon bundleRelease assembleRelease
 
       - name: Publicar el AAB para Play Console
-        # No se adjunta al Release público: un AAB no se puede instalar en un teléfono,
-        # solo se sube a Play. Queda como artefacto de la ejecución.
         uses: actions/upload-artifact@v4
         with:
           name: ControlQR-${{ steps.version.outputs.name }}-playstore
@@ -87,28 +78,22 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Renombrar el APK
-        run: |
-          mkdir -p publicacion
-          cp app/build/outputs/apk/release/*.apk \
-             "publicacion/ControlQR-${{ steps.version.outputs.name }}.apk"
-
-      - name: Publicar el Release
-        uses: softprops/action-gh-release@v2
+      - name: Publicar el APK para pruebas internas
+        # Solo accesible para quien tenga permiso en el repositorio; no es una
+        # via de distribucion publica.
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', steps.version.outputs.name) || github.ref_name }}
-          name: Control QR ${{ steps.version.outputs.name }}
-          files: publicacion/*.apk
-          generate_release_notes: true
-          body: |
-            ## Instalación
-
-            1. Descarga el archivo `.apk` de abajo desde el teléfono.
-            2. Android pedirá permiso para instalar desde esta fuente: acéptalo.
-            3. Si actualizas, instala encima: **los datos y la llave del sitio se conservan**.
-
-            > La app funciona sin internet. La conexión solo se usa para descargar esta actualización.
+          name: ControlQR-${{ steps.version.outputs.name }}-apk-pruebas
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Borrar el almacén de llaves
         if: always()
         run: rm -f keystore.jks
+
+      - name: Recordatorio
+        run: |
+          echo "AAB listo. Descárgalo desde los artefactos de esta ejecución y súbelo en"
+          echo "Play Console > Producción > Crear versión."
+          echo "Versión: ${{ steps.version.outputs.name }} (versionCode ${{ github.run_number }})"

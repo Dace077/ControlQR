@@ -155,10 +155,6 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_EARLY_GRACE, 60)
         set(value) = prefs.edit().putInt(KEY_EARLY_GRACE, value.coerceIn(0, 1440)).apply()
 
-    var lastUpdateCheck: Long
-        get() = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
-        set(value) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, value).apply()
-
     companion object {
         const val DEFAULT_POOL_SIZE = 10_000
 
@@ -177,7 +173,6 @@ class AppSettings(context: Context) {
         private const val KEY_VALIDITY_HOURS = "validity_hours"
         private const val KEY_EXIT_WITHOUT_ENTRY = "exit_without_entry"
         private const val KEY_EARLY_GRACE = "early_grace"
-        private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
 
         private fun createPrefs(context: Context): SharedPreferences = try {
             val masterKey = MasterKey.Builder(context)

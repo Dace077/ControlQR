@@ -43,13 +43,6 @@ android {
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
 
-        // Repositorio desde el que la app consulta si hay una versión nueva.
-        buildConfigField(
-            "String",
-            "UPDATE_REPO",
-            "\"${System.getenv("UPDATE_REPO") ?: "Dace077/ControlQR"}\""
-        )
-
         // Permite que la interfaz explique por qué la sincronización no está disponible
         // en lugar de mostrar un interruptor que no hace nada.
         buildConfigField("boolean", "CLOUD_SYNC_AVAILABLE", cloudSyncAvailable.toString())
